@@ -1,0 +1,55 @@
+import cv2
+import mediapipe.python.solutions.hands as mp_hands
+import mediapipe.python.solutions.drawing_utils as mp_draw
+
+# 1. Setup the AI Hand Tracker (Using the direct Pi paths)
+hands = mp_hands.Hands(max_num_hands=1, min_detection_confidence=0.7)
+
+# 2. Turn on the Camera
+cap = cv2.VideoCapture(0)
+print("Starting Camera... Press 'q' in the video window to quit.")
+
+while True:
+    success, img = cap.read()
+    if not success:
+        break
+        
+    img = cv2.flip(img, 1)
+    img_rgb = cv2.cvtColor(img, cv2.COLOR_BGR2RGB)
+    result = hands.process(img_rgb)
+    
+    gesture = "Show me your hand!"
+    
+    if result.multi_hand_landmarks:
+        for hand_landmarks in result.multi_hand_landmarks:
+            mp_draw.draw_landmarks(img, hand_landmarks, mp_hands.HAND_CONNECTIONS)
+            fingers_up = 0
+            
+            # 3. The Math
+            if hand_landmarks.landmark[8].y < hand_landmarks.landmark[6].y:
+                fingers_up += 1
+            if hand_landmarks.landmark[12].y < hand_landmarks.landmark[10].y:
+                fingers_up += 1
+            if hand_landmarks.landmark[16].y < hand_landmarks.landmark[14].y:
+                fingers_up += 1
+            if hand_landmarks.landmark[20].y < hand_landmarks.landmark[18].y:
+                fingers_up += 1
+                
+            # 4. Game Logic
+            if fingers_up == 0:
+                gesture = "ROCK!"
+            elif fingers_up == 2:
+                gesture = "SCISSORS!"
+            elif fingers_up >= 3:
+                gesture = "PAPER!"
+            else:
+                gesture = "Thinking..."
+                
+    cv2.putText(img, gesture, (20, 80), cv2.FONT_HERSHEY_SIMPLEX, 2, (0, 255, 0), 5)
+    cv2.imshow("Professor Chip's AI Game", img)
+    
+    if cv2.waitKey(1) & 0xFF == ord('q'):
+        break
+
+cap.release()
+cv2.destroyAllWindows()
